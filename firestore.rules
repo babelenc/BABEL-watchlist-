@@ -1,0 +1,141 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny global catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 1000)) &&
+             (!('favoriteGenres' in data) || (data.favoriteGenres is list && data.favoriteGenres.size() <= 50)) &&
+             (!('memberSince' in data) || data.memberSince == null || (data.memberSince is timestamp && data.memberSince <= request.time)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidMediaEntry(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 300 &&
+             (!('originalTitle' in data) || data.originalTitle == null || (data.originalTitle is string && data.originalTitle.size() <= 300)) &&
+             data.mediaType in ['movie', 'anime', 'tv'] &&
+             (!('providerId' in data) || data.providerId == null || (data.providerId is string && data.providerId.size() <= 100)) &&
+             (!('posterPath' in data) || data.posterPath == null || (data.posterPath is string && data.posterPath.size() <= 1000)) &&
+             (!('backdropPath' in data) || data.backdropPath == null || (data.backdropPath is string && data.backdropPath.size() <= 1000)) &&
+             (!('releaseYear' in data) || data.releaseYear == null || (data.releaseYear is number && data.releaseYear >= 1880 && data.releaseYear <= 2200)) &&
+             (!('genres' in data) || (data.genres is list && data.genres.size() <= 20)) &&
+             (!('synopsis' in data) || data.synopsis == null || (data.synopsis is string && data.synopsis.size() <= 5000)) &&
+             data.status in ['plan_to_watch', 'watching', 'completed', 'on_hold', 'dropped'] &&
+             (!('personalRating' in data) || data.personalRating == null || (data.personalRating is number && data.personalRating >= 0 && data.personalRating <= 10)) &&
+             (!('review' in data) || data.review == null || (data.review is string && data.review.size() <= 5000)) &&
+             (!('notes' in data) || data.notes == null || (data.notes is string && data.notes.size() <= 5000)) &&
+             (!('currentSeason' in data) || data.currentSeason == null || (data.currentSeason is number && data.currentSeason >= 0)) &&
+             (!('currentEpisode' in data) || data.currentEpisode == null || (data.currentEpisode is number && data.currentEpisode >= 0)) &&
+             (!('totalEpisodes' in data) || data.totalEpisodes == null || (data.totalEpisodes is number && data.totalEpisodes >= 0)) &&
+             (!('runtimeMinutes' in data) || data.runtimeMinutes == null || (data.runtimeMinutes is number && data.runtimeMinutes >= 0)) &&
+             (!('dateAdded' in data) || data.dateAdded == null || (data.dateAdded is timestamp && data.dateAdded <= request.time)) &&
+             (!('dateStarted' in data) || data.dateStarted == null || (data.dateStarted is timestamp && data.dateStarted <= request.time)) &&
+             (!('dateCompleted' in data) || data.dateCompleted == null || (data.dateCompleted is timestamp && data.dateCompleted <= request.time)) &&
+             (!('createdAt' in data) || data.createdAt == null || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidUserCollection(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 2000)) &&
+             (!('coverPosterPath' in data) || data.coverPosterPath == null || (data.coverPosterPath is string && data.coverPosterPath.size() <= 1000)) &&
+             (!('titleIds' in data) || (data.titleIds is list && data.titleIds.size() <= 500)) &&
+             (!('createdAt' in data) || data.createdAt == null || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidActivityLog(data) {
+      return data.id is string && isValidId(data.id) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.titleId is string && data.titleId.size() <= 128 &&
+             (!('titleName' in data) || data.titleName == null || (data.titleName is string && data.titleName.size() <= 300)) &&
+             data.actionType is string && data.actionType.size() <= 50 &&
+             (!('description' in data) || data.description == null || (data.description is string && data.description.size() <= 1000)) &&
+             (!('timestamp' in data) || data.timestamp == null || (data.timestamp is timestamp && data.timestamp <= request.time));
+    }
+
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == userId &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       incoming().userId == userId &&
+                       isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+
+      match /library/{entryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(entryId) &&
+                         incoming().userId == userId &&
+                         incoming().id == entryId &&
+                         isValidMediaEntry(incoming());
+        allow update: if isOwner(userId) &&
+                         incoming().userId == userId &&
+                         incoming().id == entryId &&
+                         isValidMediaEntry(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      match /collections/{collectionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(collectionId) &&
+                         incoming().userId == userId &&
+                         incoming().id == collectionId &&
+                         isValidUserCollection(incoming());
+        allow update: if isOwner(userId) &&
+                         incoming().userId == userId &&
+                         incoming().id == collectionId &&
+                         isValidUserCollection(incoming());
+        allow delete: if isOwner(userId);
+      }
+
+      match /activity/{activityId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) &&
+                         isValidId(activityId) &&
+                         incoming().userId == userId &&
+                         incoming().id == activityId &&
+                         isValidActivityLog(incoming());
+        allow update: if isOwner(userId) &&
+                         incoming().userId == userId &&
+                         incoming().id == activityId &&
+                         isValidActivityLog(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

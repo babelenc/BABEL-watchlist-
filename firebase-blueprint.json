@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document storing basic account and preference info",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID" },
+        "displayName": { "type": "string", "description": "Google display name" },
+        "email": { "type": "string", "description": "Google account email" },
+        "photoUrl": { "type": "string", "description": "Google account avatar photo URL" },
+        "memberSince": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "favoriteGenres": { "type": "array", "description": "List of user's favorite genres" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Profile last update timestamp" }
+      },
+      "required": ["userId", "displayName", "email"]
+    },
+    "MediaEntry": {
+      "title": "MediaEntry",
+      "description": "Personal movie, anime, or TV series library tracking entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for this library entry" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "title": { "type": "string", "description": "Title of the media" },
+        "originalTitle": { "type": "string", "description": "Original or native title" },
+        "mediaType": { "type": "string", "enum": ["movie", "anime", "tv"], "description": "Media classification" },
+        "providerId": { "type": "string", "description": "External ID from TMDB or AniList if any" },
+        "posterPath": { "type": "string", "description": "Poster image URL or path" },
+        "backdropPath": { "type": "string", "description": "Backdrop image URL or path" },
+        "releaseYear": { "type": "number", "description": "Year of release" },
+        "genres": { "type": "array", "description": "List of genres" },
+        "synopsis": { "type": "string", "description": "Plot summary or overview" },
+        "status": { "type": "string", "enum": ["plan_to_watch", "watching", "completed", "on_hold", "dropped"], "description": "Watch status" },
+        "personalRating": { "type": "number", "description": "User score from 0.0 to 10.0" },
+        "review": { "type": "string", "description": "User's written review" },
+        "notes": { "type": "string", "description": "Private personal notes" },
+        "currentSeason": { "type": "number", "description": "Current season number" },
+        "currentEpisode": { "type": "number", "description": "Current watched episode count" },
+        "totalEpisodes": { "type": "number", "description": "Total episodes known" },
+        "runtimeMinutes": { "type": "number", "description": "Runtime per episode or movie in minutes" },
+        "dateAdded": { "type": "string", "format": "date-time", "description": "Timestamp when added" },
+        "dateStarted": { "type": "string", "format": "date-time", "description": "Timestamp when started watching" },
+        "dateCompleted": { "type": "string", "format": "date-time", "description": "Timestamp when completed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Document creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Document last updated timestamp" }
+      },
+      "required": ["id", "userId", "title", "mediaType", "status"]
+    },
+    "UserCollection": {
+      "title": "UserCollection",
+      "description": "Custom curated collection of titles created by user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique collection identifier" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "name": { "type": "string", "description": "Collection name" },
+        "description": { "type": "string", "description": "Collection description" },
+        "coverPosterPath": { "type": "string", "description": "Poster URL for collection cover" },
+        "titleIds": { "type": "array", "description": "Array of MediaEntry IDs in collection" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Chronological log of user actions on their library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique activity identifier" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "titleId": { "type": "string", "description": "Target media ID" },
+        "titleName": { "type": "string", "description": "Name of the target media" },
+        "actionType": { "type": "string", "description": "Type of action taken" },
+        "description": { "type": "string", "description": "Human readable summary of action" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When action occurred" }
+      },
+      "required": ["id", "userId", "titleId", "actionType"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile and personal preferences"
+    },
+    "/users/{userId}/library/{entryId}": {
+      "schema": "MediaEntry",
+      "description": "User's personal tracked movies, anime, and TV series"
+    },
+    "/users/{userId}/collections/{collectionId}": {
+      "schema": "UserCollection",
+      "description": "User's custom curated collections"
+    },
+    "/users/{userId}/activity/{activityId}": {
+      "schema": "ActivityLog",
+      "description": "User's recent activity stream"
+    }
+  }
+}
